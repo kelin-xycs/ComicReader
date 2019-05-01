@@ -1,0 +1,524 @@
+﻿<!DOCTYPE html style="width:100%">
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" style="width:100%">
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <link rel="stylesheet" type="text/css" href="jWebForm/jWebForm.css" />
+    <script type="text/javascript" src="jWebForm/jWebForm.js"></script>
+    <script type="text/javascript" src="jWebForm/DragObj.js"></script>
+    <script type="text/javascript" src="jWebForm/PictureBoxFit.js"></script>
+    <script type="text/javascript" src="jWebForm/ContextMenu.js"></script>
+    <script type="text/javascript" src="jWebForm/DropDown.js"></script>
+    <script type="text/javascript" src="jWebForm/DropDownList.js"></script>
+    <script type="text/javascript">
+
+        $j.Page_Load = function Page_Load() {
+
+
+            window.pageSize = 10;
+
+
+            var tableBar = document.getElementById("tableBar");
+            var divContent = document.getElementById("divContent");
+
+            window.addEventListener("resize", function () {
+
+                divContent.style.height = window.innerHeight - tableBar.offsetHeight;
+
+            });
+
+            divContent.style.height = (window.innerHeight - tableBar.offsetHeight) + "px";
+
+
+            var ddlPage = $j("ddlPage");
+
+            ddlPage.SelectChanged(ShowImages);
+
+
+            window.addEventListener("keydown", window_keydown);
+        }
+
+        function window_keydown() {
+
+            var ctrl = $j.FocusedControl();
+
+            if (ctrl.isPicDrag) {
+
+                TurnDragPic(ctrl);
+                return;
+            }
+
+            TurnPage();
+        }
+
+        function TurnDragPic(drag) {
+
+            var e = window.event;
+
+            var needTurn = false;
+
+            if (e.keyCode == 37) {
+
+                if (drag.picIndex == 0) {
+                    ShowAlert("已到达第一张图片 ！");
+                    return;
+                }
+
+                drag.picIndex--;
+
+                needTurn = true;
+
+            }
+            else if (e.keyCode == 39) {
+
+                if (drag.picIndex >= _urlList.length - 1) {
+
+                    ShowAlert("已到达最后一张图片 ！");
+                    return;
+                }
+
+                drag.picIndex++;
+
+                needTurn = true;
+            }
+
+
+            if (!needTurn)
+                return;
+
+
+            var elemt = drag.Element();
+
+            var imgPic = $j.getElementById(elemt, "imgPic");
+
+            imgPic.src = _urlList[drag.picIndex];
+            
+        }
+
+        function TurnPage()
+        {
+            var e = window.event;
+
+            var pageSize = window.pageSize;
+
+            var ddlPage = $j("ddlPage");
+
+            var pageNumber = parseInt(ddlPage.SelectedText());
+
+            var needTurnPage = false;
+
+            if (e.keyCode == 37) {
+
+                if (pageNumber == 1) {
+
+                    ShowAlert("已到达首页 ！");
+                    return;
+                }
+
+                pageNumber--;
+
+                needTurnPage = true;
+            }
+            else if (e.keyCode == 39) {
+
+                if (pageNumber * pageSize >= _urlList.length) {
+
+                    ShowAlert("已到达末页 ！");
+                    return;
+                }
+
+                pageNumber++;
+
+                needTurnPage = true;
+            }
+
+
+            if (!needTurnPage)
+                return;
+
+
+            var ddlPage = $j("ddlPage");
+
+            ddlPage.SelectedText(pageNumber);
+
+            ShowImages();
+
+        }
+
+        function ShowImages()
+        {
+            var ddlPage = $j("ddlPage");
+
+            var pageSize = window.pageSize;
+            var pageIndex = parseInt(ddlPage.SelectedText()) - 1;
+            
+            var beginIndex = pageIndex * pageSize;
+            var endIndex = beginIndex + pageSize - 1;
+
+            if (endIndex >= _urlList.length)
+                endIndex = _urlList.length - 1;
+
+            var divContent = document.getElementById("divContent");
+
+            divContent.innerHTML = "";
+
+            for (let i = beginIndex; i <= endIndex; i++) {
+
+                let img = document.createElement("img");
+
+                img.style.marginLeft = "5px";
+                img.style.marginRight = "5px";
+                img.style.marginBottom = "5px";
+
+                if (window.imgWidth)
+                    img.style.width = window.imgWidth;
+
+                let url = _urlList[i];
+
+                img.src = url;
+
+                img.addEventListener("dblclick", function () {
+
+                    ShowPic(url, i);
+
+                });
+
+                divContent.appendChild(img);
+            }
+
+            divContent.scrollTo(0, 0);
+        }
+
+        function ShowPic(url, picIndex) {
+
+            var drag = $j.DragObj();
+
+            drag.Width("400px");
+            drag.Height("400px");
+            drag.MinWidth("50px");
+            drag.MinHeight("50px");
+
+            drag.picIndex = picIndex;
+            drag.isPicDrag = true;
+
+            var divDialog = $j.getElementById(divTemplates, "divPic");
+
+            var elemt = drag.Element();
+
+            elemt.innerHTML = divDialog.outerHTML;
+
+            var imgPic = $j.getElementById(elemt, "imgPic");
+
+            imgPic.src = url;
+
+            var divPic = $j.getElementById(elemt, "divPic");
+
+            divPic.oncontextmenu = function (e) {
+
+                _contextmenuDrag = drag;
+                _picUrl = url;
+
+                if (!_contextMenu) {
+
+                    var divContextMenu = document.getElementById("divContextMenu");
+
+                    _contextMenu = $j.ContextMenu(divContextMenu);
+                }
+
+                _contextMenu.Show(e.clientX, e.clientY);
+
+                return false;
+            }
+
+            drag.Show();
+        }
+
+        function OpenFolderDialog() {
+            Cef.OpenFolderDialog();
+        }
+
+        function OpenFolder(path) {
+
+            var txtPath = document.getElementById("txtPath");
+
+            txtPath.value = path;
+        }
+
+        var _contextmenuDrag;
+        var _picUrl;
+        var _contextMenu;
+        
+        var _urlList;
+        var _pageCount;
+
+        function ViewFolder(pageNumber) {
+
+            var txtPath = document.getElementById("txtPath");
+
+            var path = txtPath.value;
+
+            if (path.trim() == "") {
+
+                alert("文件夹路径不能为空 ！");
+                return;
+            }
+
+            var urlList = Cef.GetImages(path);
+
+            _urlList = eval(urlList);
+
+            if (_urlList.length == 0) {
+                alert("文件夹中没有图片 ！");
+                return;
+            }
+
+            BindDDLPage(pageNumber);
+
+            ShowImages();
+        }
+
+        function BindDDLPage(pageNumber) {
+
+            var ddlPage = $j("ddlPage");
+
+            _pageCount = Math.ceil(_urlList.length / window.pageSize);
+
+            var d = [];
+
+            for (var i = 0; i < _pageCount; i++) {
+
+                d[i] = i + 1;
+            }
+
+            ddlPage.DataBind(d);
+
+            if (!pageNumber)
+                pageNumber = 1;
+            else if (pageNumber > _pageCount)
+                pageNumber = _pageCount;
+
+            ddlPage.SelectedText(pageNumber);
+        }
+
+        function OpenOptionsDialog() {
+            if (window.dragOptions) {
+                dragOptions.Show();
+                return;
+            }
+
+            var drag = $j.DragObj();
+
+            drag.Width("400px");
+            drag.Height("300px");
+            drag.MinWidth("400px");
+            drag.MinHeight("300px");
+
+            var divTemplates = document.getElementById("divTemplates");
+
+            var divDialog = $j.getElementById(divTemplates, "divOptions");
+
+            var elemt = drag.Element();
+
+            elemt.innerHTML = divDialog.outerHTML;
+
+            var spanClose = $j.getElementById(elemt, "spanClose");
+
+            spanClose.addEventListener("click", function () {
+                drag.Close();
+            });
+
+            drag.NotDrag(spanClose);
+
+
+            var ifr = $j.getElementById(elemt, "ifrContent");
+            ifr.src = "Options.html";
+
+
+            drag.Show();
+
+            window.dragOptions = drag;
+        }
+
+        function ClosePic() {
+
+            _contextmenuDrag.Close();
+
+            _contextMenu.Close();
+        }
+
+        function ShowInfoTip(title, info) {
+
+            
+            var drag = CreateInfoTip(title, info);
+
+            drag.Show();
+
+        }
+
+        function CreateInfoTip(title, info) {
+            var drag = $j.DragObj();
+
+            drag.Width("500px");
+            drag.Height("150px");
+            drag.MinWidth("500px");
+            drag.MinHeight("150px");
+
+            var divTemplates = document.getElementById("divTemplates");
+
+            var divDialog = $j.getElementById(divTemplates, "divInfoTip");
+
+            var elemt = drag.Element();
+
+            elemt.innerHTML = divDialog.outerHTML;
+
+            var spanTitle = $j.getElementById(elemt, "spanTitle");
+
+            spanTitle.innerText = title;
+
+            var spanClose = $j.getElementById(elemt, "spanClose");
+
+            spanClose.addEventListener("click", function () {
+                drag.Close();
+            });
+
+            drag.NotDrag(spanClose);
+
+
+            var divInfo = $j.getElementById(elemt, "divInfo");
+
+            divInfo.innerText = info;
+
+            drag.NotDrag(divInfo);
+
+            return drag;
+        }
+
+        function ShowPicInfo() {
+
+            var url = decodeURI(_picUrl);
+
+            ShowInfoTip("图片信息", url);
+
+            _contextMenu.Close();
+        }
+
+        var _alertDrag;
+
+        function ShowAlert(text) {
+
+            if (!_alertDrag) {
+
+                _alertDrag = CreateInfoTip("提示", "");
+            }
+
+            var elemt = _alertDrag.Element();
+
+            var divInfo = $j.getElementById(elemt, "divInfo");
+
+            divInfo.innerText = text;
+
+            _alertDrag.Show();
+        }
+
+        function ShowUserGuide() {
+
+            var info = "可用光标左右键翻页，双击图片可弹出对话框显示图片，可用鼠标缩放对话框。<br /><br />"
+                + "单击对话框可使对话框获得焦点，在有焦点的情况下可以用光标左右键翻阅上一张下一张图片。<br /><br />"
+                + "右键关闭对话框和查看图片信息。<br /><br />"
+                + "单击页面其它部分可使主页面获得焦点，主页面获得焦点的情况下光标左右键仍然用于翻页。<br /><br />"
+                + "可在“设置”中设置 图片宽度 和 每页显示多少张图片（Page Size）。";
+
+            var drag = CreateInfoTip("使用说明", "");
+
+            drag.Width("550px");
+            drag.Height("350px");
+            drag.MinWidth("550px");
+            drag.MinHeight("350px");
+
+            var elemt = drag.Element();
+
+            var divInfo = $j.getElementById(elemt, "divInfo");
+
+            divInfo.innerHTML = info;
+
+            drag.Show();
+        }
+
+/**/</script>
+</head>
+<body style="margin:0px; width:100%;height:100%; overflow:hidden">
+    <table id="tableBar" style="width:100%;">
+        <tr>
+            <td style="">
+                <input id="txtPath" style="width: 100%" />
+            </td>
+            <td style="width:350px; padding-left:10px; cursor:default">
+                <span onclick="OpenFolderDialog();">文件夹</span>&nbsp;
+                <span onclick="ViewFolder();">开始阅读</span>&nbsp;
+                <span onclick="OpenOptionsDialog();">设置</span>&nbsp;
+                页码
+                <j:DropDownList id="ddlPage" Width="50px"></j:DropDownList>&nbsp;
+                <span onclick="ShowUserGuide();">使用说明</span>
+            </td>
+        </tr>
+    </table>
+
+
+    <div id="divContent" style="text-align:center; width:100%; overflow:auto; padding-bottom:10px; box-sizing:border-box">
+
+    </div>
+
+
+    <div style="display:none">
+
+        <div id="divContextMenu" style="width:100%; height:100%; background-color:cornsilk; border:solid 1px cornflowerblue; cursor:default">
+            <div onclick="ClosePic();">关闭</div>
+            <div onclick="ShowPicInfo();">图片信息</div>
+        </div>
+
+    </div>
+
+    <div id="divTemplates" style="display:none">
+
+        <div id="divPic" style="border: solid 1px lightblue; width:100%; height:100%">
+            <img id="imgPic" style="width:100%; height:100%"  />
+        </div>
+
+        <div id="divInfoTip" style="box-sizing:border-box; border: 1px solid gray; padding:5px; padding-bottom:10px; height: 100%; background-color:white; overflow:hidden;">
+            <table id="table1" style="width:100%; height:100%;">
+                <tr>
+                    <td style="height:1px; padding-bottom:5px; border-bottom:solid 1px gray">
+                        <div><span id="spanTitle"></span><span id="spanClose" style="float:right; cursor:default">×</span></div>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border-bottom:solid 1px gray;">
+                        <div id="divInfo" style="word-break:break-all;"></div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!--<div id="divDialog" style="border: 1px solid gray; padding:5px; height: 100%; background-color:white ; display:flex; flex-flow:column">-->
+        <div id="divOptions" style="box-sizing:border-box; border: 1px solid gray; padding:5px; padding-bottom:10px; height: 100%; background-color:white ;">
+            <table id="table1" style="width:100%; height:100%;">
+                <tr>
+                    <td style="height:1px; padding-bottom:5px; border-bottom:solid 1px gray">
+                        <div>设置<span id="spanClose" style="float:right; cursor:default">×</span></div>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border-bottom:solid 1px gray">
+                        <iframe id="ifrContent" style="border:0px; width:100%; height:100%"></iframe>
+                    </td>
+                </tr>
+            </table>
+            <!--<div style="padding:5px">选项<span id="spanClose" style="float:right;">×</span></div>
+            <iframe id="ifrContent" style="border:solid 1px blue; flex:1 "></iframe>-->
+        </div>
+
+    </div>
+
+</body>
+</html>
